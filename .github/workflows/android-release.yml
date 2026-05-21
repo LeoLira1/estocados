@@ -2,12 +2,18 @@ name: Android Release APK
 
 on:
   push:
+    # Gera APK automaticamente em push de branch principal (sem passo manual)
     branches:
       - main
       - master
+    # Mantém release oficial por versão quando houver tag
     tags:
       - 'v*'
   workflow_dispatch:
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
