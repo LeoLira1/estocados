@@ -7,15 +7,12 @@ Aplicativo Flutter para consultar a tabela `estocados_cooperados` na base Turso.
 - Listar produtos estocados por cooperado em ordem de cooperado/produto.
 - Atualização por pull-to-refresh.
 
-## Situação atual do APK de release
-Atualmente o APK **ainda não está publicado** neste repositório.
+## APK sem passo manual de tag
+Agora o release do APK acontece **automaticamente** também em push para `main`/`master`:
+- Push em `main`/`master`: gera release automático `auto-<run_number>` como **pre-release**.
+- Push de tag `v*` (ex.: `v1.0.0`): gera release versionado final (não pre-release).
 
-Ele será gerado automaticamente no GitHub Actions quando você:
-1. subir este código para o GitHub,
-2. criar uma tag no formato `v*` (ex.: `v1.0.0`),
-3. aguardar o workflow `Android Release APK` terminar com sucesso.
-
-Após isso, o arquivo `app-release.apk` ficará disponível na aba **Releases**.
+Ou seja: não precisa criar tag para já ter um link de APK; a tag fica opcional para versionamento oficial.
 
 ## Como rodar local
 ```bash
@@ -35,13 +32,7 @@ O workflow `.github/workflows/android-release.yml` faz:
 3. `flutter pub get`,
 4. `flutter test`,
 5. `flutter build apk --release`,
-6. publicação do APK no Release da tag.
-
-Para disparar por tag:
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
+6. criação/atualização de release no GitHub com `app-release.apk`.
 
 ## Query usada
 ```sql
