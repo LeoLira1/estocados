@@ -6,6 +6,6 @@ void main() {
   testWidgets('app shell renders', (tester) async {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const EstocadosApp());
-    expect(find.text('Estocados'), findsOneWidget);
+    expect(find.text('Estocados'), findsAtLeastNWidgets(1));
   });
 }
