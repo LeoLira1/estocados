@@ -14,7 +14,7 @@ class EstocadosApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Estocados Cooperados',
+      title: 'Estocados',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(colorSchemeSeed: Colors.green, useMaterial3: true),
       home: const AppShell(),
@@ -36,7 +36,7 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Estoque de Cooperados')),
+      appBar: AppBar(title: const Text('Estocados')),
       body: _pages[_index],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
