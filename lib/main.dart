@@ -199,8 +199,8 @@ class _CooperadosPageState extends State<CooperadosPage> {
               final item = items[index];
               return ListTile(
                 title: Text(item.produto),
-                subtitle: Text('Cooperado: ${item.cooperado}'),
-                trailing: Text(item.quantidade.toString()),
+                subtitle: Text(item.cooperado),
+                trailing: Chip(label: Text('${item.quantidade} un.')),
               );
             },
           ),
@@ -237,7 +237,7 @@ class TursoRepository {
           {
             'type': 'execute',
             'stmt': {
-              'sql': 'SELECT produto, cooperado, quantidade FROM estocados_cooperados WHERE ativo = 1 ORDER BY cooperado, produto',
+              'sql': 'SELECT razao_social, descricao, CAST(SUM(saldo) AS INTEGER) FROM materiais_terceiros WHERE saldo > 0 GROUP BY razao_social, descricao ORDER BY razao_social, descricao',
               'want_rows': true,
             },
           }
