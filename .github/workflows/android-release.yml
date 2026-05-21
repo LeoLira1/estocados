@@ -18,6 +18,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Necessário para criar/atualizar GitHub Release e anexar o APK
     permissions:
       contents: write
     steps:
