@@ -47,7 +47,8 @@ class EstocadosApp extends StatelessWidget {
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: kSurface,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: const BorderSide(color: kBorder),
@@ -92,8 +93,10 @@ class _AppShellState extends State<AppShell> {
         selectedIndex: _index,
         onDestinationSelected: (value) => setState(() => _index = value),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.inventory_2_outlined), label: 'Estocados'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Configuração'),
+          NavigationDestination(
+              icon: Icon(Icons.inventory_2_outlined), label: 'Estocados'),
+          NavigationDestination(
+              icon: Icon(Icons.settings_outlined), label: 'Configuração'),
         ],
       ),
     );
@@ -207,8 +210,10 @@ class _EstocadosPageState extends State<EstocadosPage> {
     setState(() => _future = _carregar());
   }
 
-  List<String> _opcoes(List<MaterialTerceiro> itens, String Function(MaterialTerceiro) campo) {
-    final valores = itens.map(campo).where((v) => v.isNotEmpty).toSet().toList()..sort();
+  List<String> _opcoes(
+      List<MaterialTerceiro> itens, String Function(MaterialTerceiro) campo) {
+    final valores = itens.map(campo).where((v) => v.isNotEmpty).toSet().toList()
+      ..sort();
     return [_todos, ...valores];
   }
 
@@ -334,7 +339,8 @@ class _Filtros extends StatelessWidget {
   final String tipo;
   final String cooperado;
   final String produto;
-  final void Function(String armazem, String tipo, String cooperado, String produto) onChanged;
+  final void Function(
+      String armazem, String tipo, String cooperado, String produto) onChanged;
 
   Widget _dropdown({
     required String label,
@@ -348,7 +354,7 @@ class _Filtros extends StatelessWidget {
         Text(label, style: const TextStyle(color: kLabelColor, fontSize: 13)),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: opcoes.contains(value) ? value : opcoes.first,
+          initialValue: opcoes.contains(value) ? value : opcoes.first,
           isExpanded: true,
           dropdownColor: kSurface,
           items: [
@@ -420,54 +426,63 @@ class _GrupoCooperado extends StatelessWidget {
     final saldoTotal = itens.fold<double>(0, (soma, i) => soma + i.saldo);
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: kCard,
-        borderRadius: BorderRadius.circular(8),
-        border: const Border(left: BorderSide(color: kAccentBlue, width: 3)),
+      decoration: const BoxDecoration(
+        border: Border(left: BorderSide(color: kAccentBlue, width: 3)),
       ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          initiallyExpanded: true,
-          tilePadding: const EdgeInsets.symmetric(horizontal: 12),
-          childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-          collapsedIconColor: kLabelColor,
-          iconColor: kLabelColor,
-          title: Row(
-            children: [
-              const Text('🏢', style: TextStyle(fontSize: 15)),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  cooperado,
-                  style: const TextStyle(
-                    color: kAccentBlue,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
+      // ListTile (interno ao ExpansionTile) exige que a cor de fundo venha de
+      // um Material ancestral, não de um DecoratedBox (asserção do Flutter 3.44+).
+      child: Material(
+        color: kCard,
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(8),
+          bottomRight: Radius.circular(8),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            initiallyExpanded: true,
+            tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+            childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+            collapsedIconColor: kLabelColor,
+            iconColor: kLabelColor,
+            title: Row(
+              children: [
+                const Text('🏢', style: TextStyle(fontSize: 15)),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    cooperado,
+                    style: const TextStyle(
+                      color: kAccentBlue,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          subtitle: Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text.rich(
-              TextSpan(
-                style: const TextStyle(color: kLabelColor, fontSize: 12),
-                children: [
-                  TextSpan(text: '${itens.length} item(s) · Saldo: '),
-                  TextSpan(
-                    text: formatQuantidade(saldoTotal),
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-                  ),
-                  const TextSpan(text: ' un.'),
-                ],
+              ],
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text.rich(
+                TextSpan(
+                  style: const TextStyle(color: kLabelColor, fontSize: 12),
+                  children: [
+                    TextSpan(text: '${itens.length} item(s) · Saldo: '),
+                    TextSpan(
+                      text: formatQuantidade(saldoTotal),
+                      style: const TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.w700),
+                    ),
+                    const TextSpan(text: ' un.'),
+                  ],
+                ),
               ),
             ),
+            children: [
+              for (final item in itens) _ItemCard(item: item),
+            ],
           ),
-          children: [
-            for (final item in itens) _ItemCard(item: item),
-          ],
         ),
       ),
     );
@@ -485,7 +500,8 @@ class _ItemCard extends StatelessWidget {
         TextSpan(text: '$label: ', style: const TextStyle(color: kLabelColor)),
         TextSpan(
           text: valor,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          style:
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -541,11 +557,14 @@ class _ItemCard extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               if (item.codigo.isNotEmpty)
-                Text.rich(_campo('Cod', item.codigo), style: const TextStyle(fontSize: 12)),
+                Text.rich(_campo('Cod', item.codigo),
+                    style: const TextStyle(fontSize: 12)),
               if (item.armazem.isNotEmpty)
-                Text.rich(_campo('Arm', item.armazem), style: const TextStyle(fontSize: 12)),
+                Text.rich(_campo('Arm', item.armazem),
+                    style: const TextStyle(fontSize: 12)),
               if (item.documento.isNotEmpty)
-                Text.rich(_campo('Doc', item.documento), style: const TextStyle(fontSize: 12)),
+                Text.rich(_campo('Doc', item.documento),
+                    style: const TextStyle(fontSize: 12)),
               if (item.emissao.isNotEmpty)
                 Text.rich(
                   _campo('Emissão', formatData(item.emissao)),
@@ -556,7 +575,8 @@ class _ItemCard extends StatelessWidget {
                   style: const TextStyle(fontSize: 12),
                   children: [
                     _campo('Orig', formatQuantidade(item.original)),
-                    const TextSpan(text: ' → ', style: TextStyle(color: kLabelColor)),
+                    const TextSpan(
+                        text: ' → ', style: TextStyle(color: kLabelColor)),
                     _campo('Entregue', formatQuantidade(item.entregue)),
                   ],
                 ),
@@ -681,7 +701,8 @@ class TursoRepository {
     }
 
     final map = jsonDecode(response.body) as Map<String, dynamic>;
-    final result = map['results']?[0]?['response']?['result'] as Map<String, dynamic>?;
+    final result =
+        map['results']?[0]?['response']?['result'] as Map<String, dynamic>?;
     if (result == null) {
       throw Exception('Resposta inesperada do banco: ${response.body}');
     }
@@ -709,14 +730,38 @@ class TursoRepository {
       return MaterialTerceiro(
         cooperado: texto(valores, ['razao_social', 'cooperado', 'cliente']),
         produto: texto(valores, ['descricao', 'produto', 'descricao_produto']),
-        codigo: texto(valores, ['codigo', 'cod', 'codigo_produto', 'cod_produto', 'produto_codigo']),
-        armazem: texto(valores, ['armazem', 'arm', 'cod_armazem', 'codigo_armazem']),
-        documento: texto(valores, ['documento', 'doc', 'num_doc', 'numero_documento', 'nota', 'num_nota']),
-        emissao: texto(valores, ['emissao', 'data_emissao', 'dt_emissao', 'data', 'data_entrada']),
-        original: numero(valores, ['quantidade_original', 'qtd_original', 'quantidade', 'qtd', 'qtde', 'orig']),
-        entregue: numero(valores, ['entregue', 'qtd_entregue', 'quantidade_entregue']),
+        codigo: texto(valores, [
+          'codigo',
+          'cod',
+          'codigo_produto',
+          'cod_produto',
+          'produto_codigo'
+        ]),
+        armazem:
+            texto(valores, ['armazem', 'arm', 'cod_armazem', 'codigo_armazem']),
+        documento: texto(valores, [
+          'documento',
+          'doc',
+          'num_doc',
+          'numero_documento',
+          'nota',
+          'num_nota'
+        ]),
+        emissao: texto(valores,
+            ['emissao', 'data_emissao', 'dt_emissao', 'data', 'data_entrada']),
+        original: numero(valores, [
+          'quantidade_original',
+          'qtd_original',
+          'quantidade',
+          'qtd',
+          'qtde',
+          'orig'
+        ]),
+        entregue: numero(
+            valores, ['entregue', 'qtd_entregue', 'quantidade_entregue']),
         saldo: numero(valores, ['saldo']),
-        tipo: texto(valores, ['tipo', 'tipo_movimento', 'movimento', 'operacao']),
+        tipo:
+            texto(valores, ['tipo', 'tipo_movimento', 'movimento', 'operacao']),
       );
     }).toList();
   }
