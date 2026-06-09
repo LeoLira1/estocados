@@ -1,11 +1,14 @@
-# Estocados App (Flutter)
+# Estocados App (Flutter) 📦
 
-Aplicativo Flutter para consultar a tabela `estocados_cooperados` na base Turso.
+Aplicativo Flutter para consultar a tabela `materiais_terceiros` na base Turso.
 
 ## Funcionalidades
 - Configurar URL do banco (`libsql://...`) e token diretamente no app.
-- Listar produtos estocados por cooperado em ordem de cooperado/produto.
+- Tema escuro com filtros de Armazém, Tipo, Cooperado e Produto.
+- Itens agrupados por cooperado em expanders, com contagem de itens e saldo total.
+- Cards de item com código, armazém, documento, emissão, quantidade original → entregue, saldo e badge Entrada/Saída.
 - Atualização por pull-to-refresh.
+- Ícone do app com a caixa 📦 (PNGs em `android/app/src/main/res/mipmap-*`).
 
 ## APK sem passo manual de tag
 O release do APK acontece **automaticamente** também em push para `main`/`master`:
@@ -36,8 +39,9 @@ O workflow `.github/workflows/android-release.yml` faz:
 
 ## Query usada
 ```sql
-SELECT produto, cooperado, quantidade
-FROM estocados_cooperados
-WHERE ativo = 1
-ORDER BY cooperado, produto;
+SELECT * FROM materiais_terceiros
+WHERE saldo > 0
+ORDER BY razao_social, descricao;
 ```
+As colunas são mapeadas pelo nome retornado pela API (com sinônimos comuns), então o app
+tolera variações no schema (`codigo`/`cod`, `documento`/`num_doc`, `emissao`/`data_emissao` etc.).
