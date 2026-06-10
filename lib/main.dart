@@ -217,14 +217,49 @@ class _EstocadosPageState extends State<EstocadosPage> {
     return [_todos, ...valores];
   }
 
-  List<MaterialTerceiro> _filtrar(List<MaterialTerceiro> itens) {
+  /// Filtra ignorando seletivamente um dos filtros, para montar as opções
+  /// em cascata de cada dropdown a partir das outras seleções.
+  List<MaterialTerceiro> _filtrarItens(
+    List<MaterialTerceiro> itens, {
+    String? armazem,
+    String? tipo,
+    String? cooperado,
+    String? produto,
+  }) {
     return itens.where((i) {
-      if (_armazem != _todos && i.armazem != _armazem) return false;
-      if (_tipo != _todos && i.tipo != _tipo) return false;
-      if (_cooperado != _todos && i.cooperado != _cooperado) return false;
-      if (_produto != _todos && i.produto != _produto) return false;
+      if (armazem != null && armazem != _todos && i.armazem != armazem) {
+        return false;
+      }
+      if (tipo != null && tipo != _todos && i.tipo != tipo) return false;
+      if (cooperado != null &&
+          cooperado != _todos &&
+          i.cooperado != cooperado) {
+        return false;
+      }
+      if (produto != null && produto != _todos && i.produto != produto) {
+        return false;
+      }
       return true;
     }).toList();
+  }
+
+  /// Volta para "Todos" qualquer seleção que ficou sem itens após a mudança
+  /// de outro filtro (ex.: produto escolhido que o novo cooperado não tem).
+  void _sanitizarSelecoes(List<MaterialTerceiro> itens) {
+    bool valido(String selecao, String Function(MaterialTerceiro) campo) {
+      if (selecao == _todos) return true;
+      return _filtrarItens(
+        itens,
+        armazem: _armazem,
+        tipo: _tipo,
+        cooperado: _cooperado,
+        produto: _produto,
+      ).any((i) => campo(i) == selecao);
+    }
+
+    if (!valido(_produto, (i) => i.produto)) _produto = _todos;
+    if (!valido(_armazem, (i) => i.armazem)) _armazem = _todos;
+    if (!valido(_tipo, (i) => i.tipo)) _tipo = _todos;
   }
 
   @override
@@ -264,11 +299,40 @@ class _EstocadosPageState extends State<EstocadosPage> {
           );
         }
 
-        final filtrados = _filtrar(todosItens);
+        final filtrados = _filtrarItens(
+          todosItens,
+          armazem: _armazem,
+          tipo: _tipo,
+          cooperado: _cooperado,
+          produto: _produto,
+        );
         final grupos = <String, List<MaterialTerceiro>>{};
         for (final item in filtrados) {
           grupos.putIfAbsent(item.cooperado, () => []).add(item);
         }
+
+        // Opções em cascata: cada dropdown lista apenas valores que existem
+        // considerando as seleções dos outros filtros.
+        final armazens = _opcoes(
+          _filtrarItens(todosItens,
+              tipo: _tipo, cooperado: _cooperado, produto: _produto),
+          (i) => i.armazem,
+        );
+        final tipos = _opcoes(
+          _filtrarItens(todosItens,
+              armazem: _armazem, cooperado: _cooperado, produto: _produto),
+          (i) => i.tipo,
+        );
+        final cooperados = _opcoes(
+          _filtrarItens(todosItens,
+              armazem: _armazem, tipo: _tipo, produto: _produto),
+          (i) => i.cooperado,
+        );
+        final produtos = _opcoes(
+          _filtrarItens(todosItens,
+              armazem: _armazem, tipo: _tipo, cooperado: _cooperado),
+          (i) => i.produto,
+        );
 
         return RefreshIndicator(
           onRefresh: () async => _recarregar(),
@@ -276,10 +340,10 @@ class _EstocadosPageState extends State<EstocadosPage> {
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
             children: [
               _Filtros(
-                armazens: _opcoes(todosItens, (i) => i.armazem),
-                tipos: _opcoes(todosItens, (i) => i.tipo),
-                cooperados: _opcoes(todosItens, (i) => i.cooperado),
-                produtos: _opcoes(todosItens, (i) => i.produto),
+                armazens: armazens,
+                tipos: tipos,
+                cooperados: cooperados,
+                produtos: produtos,
                 armazem: _armazem,
                 tipo: _tipo,
                 cooperado: _cooperado,
@@ -289,6 +353,7 @@ class _EstocadosPageState extends State<EstocadosPage> {
                   _tipo = tipo;
                   _cooperado = cooperado;
                   _produto = produto;
+                  _sanitizarSelecoes(todosItens);
                 }),
               ),
               const SizedBox(height: 12),
@@ -353,18 +418,26 @@ class _Filtros extends StatelessWidget {
       children: [
         Text(label, style: const TextStyle(color: kLabelColor, fontSize: 13)),
         const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
-          initialValue: opcoes.contains(value) ? value : opcoes.first,
-          isExpanded: true,
-          dropdownColor: kSurface,
-          items: [
-            for (final opcao in opcoes)
-              DropdownMenuItem(
-                value: opcao,
-                child: Text(opcao, overflow: TextOverflow.ellipsis),
-              ),
-          ],
-          onChanged: (v) => onSelected(v ?? opcoes.first),
+        // DropdownButton simples (sem FormField) para refletir imediatamente
+        // mudanças de valor e de opções vindas dos filtros em cascata.
+        InputDecorator(
+          decoration: const InputDecoration(),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: opcoes.contains(value) ? value : opcoes.first,
+              isExpanded: true,
+              isDense: true,
+              dropdownColor: kSurface,
+              items: [
+                for (final opcao in opcoes)
+                  DropdownMenuItem(
+                    value: opcao,
+                    child: Text(opcao, overflow: TextOverflow.ellipsis),
+                  ),
+              ],
+              onChanged: (v) => onSelected(v ?? opcoes.first),
+            ),
+          ),
         ),
       ],
     );
