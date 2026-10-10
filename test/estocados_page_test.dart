@@ -96,12 +96,12 @@ void main() {
       // Grupos por cooperado com totais.
       expect(find.textContaining('ANDRE VILELA GOUVEIA'), findsOneWidget);
       expect(find.textContaining('BRAVO ARMAZENS GERAIS LTDA'), findsOneWidget);
-      expect(find.textContaining('2 item(s)'), findsOneWidget);
+      expect(find.textContaining('2 produto(s)'), findsOneWidget);
 
-      // Itens com saldo e badge de tipo normalizado (E -> Entrada, S -> Saída).
+      // Cada produto aparece uma vez com o saldo somado.
       expect(find.text('HERBICIDA PROVENCE TOTAL 10L'), findsOneWidget);
-      expect(find.text('Saída'), findsOneWidget);
-      expect(find.text('Entrada'), findsNWidgets(2));
+      expect(find.text('23 un.'), findsOneWidget);
+      expect(find.text('375 un.'), findsOneWidget);
 
       // Filtros e resumo.
       expect(find.text('Armazém'), findsOneWidget);
@@ -136,6 +136,31 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('1 linha(s)'), findsOneWidget);
     }, () => MockClient((request) async => _tursoResponse()));
+  });
+
+  test('agruparPorProduto soma saldos do mesmo produto', () {
+    MaterialTerceiro item(String produto, double saldo) => MaterialTerceiro(
+          cooperado: 'JUVENCIO PASSAMANI JUNIOR',
+          produto: produto,
+          codigo: '49000',
+          armazem: '70',
+          documento: '',
+          emissao: '2026-05-12',
+          original: saldo,
+          entregue: 0,
+          saldo: saldo,
+          tipo: 'S',
+        );
+
+    final resumo = agruparPorProduto([
+      item('HERBICIDA ZAPP QI 620 20L', 3),
+      item('HERBICIDA ZAPP QI 620 20L', 7),
+      item('HERBICIDA BORAL FULL 20L', 2),
+    ]);
+    expect(resumo.length, 2);
+    expect(resumo[0].produto, 'HERBICIDA ZAPP QI 620 20L');
+    expect(resumo[0].saldo, 10);
+    expect(resumo[1].saldo, 2);
   });
 
   test('formatQuantidade usa separador de milhar', () {
