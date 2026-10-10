@@ -497,6 +497,7 @@ class _GrupoCooperado extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final saldoTotal = itens.fold<double>(0, (soma, i) => soma + i.saldo);
+    final produtos = agruparPorProduto(itens);
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: const BoxDecoration(
@@ -541,7 +542,7 @@ class _GrupoCooperado extends StatelessWidget {
                 TextSpan(
                   style: const TextStyle(color: kLabelColor, fontSize: 12),
                   children: [
-                    TextSpan(text: '${itens.length} item(s) · Saldo: '),
+                    TextSpan(text: '${produtos.length} produto(s) · Saldo: '),
                     TextSpan(
                       text: formatQuantidade(saldoTotal),
                       style: const TextStyle(
@@ -553,7 +554,7 @@ class _GrupoCooperado extends StatelessWidget {
               ),
             ),
             children: [
-              for (final item in itens) _ItemCard(item: item),
+              for (final resumo in produtos) _ProdutoCard(resumo: resumo),
             ],
           ),
         ),
@@ -562,119 +563,62 @@ class _GrupoCooperado extends StatelessWidget {
   }
 }
 
-class _ItemCard extends StatelessWidget {
-  const _ItemCard({required this.item});
+/// Produto de um cooperado com o saldo somado de todos os lançamentos.
+class ProdutoResumo {
+  final String produto;
+  final double saldo;
 
-  final MaterialTerceiro item;
+  ProdutoResumo({required this.produto, required this.saldo});
+}
 
-  TextSpan _campo(String label, String valor) {
-    return TextSpan(
-      children: [
-        TextSpan(text: '$label: ', style: const TextStyle(color: kLabelColor)),
-        TextSpan(
-          text: valor,
-          style:
-              const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-      ],
-    );
+/// Agrupa os lançamentos pelo produto, somando os saldos, na ordem em que
+/// cada produto aparece pela primeira vez.
+List<ProdutoResumo> agruparPorProduto(List<MaterialTerceiro> itens) {
+  final saldos = <String, double>{};
+  for (final item in itens) {
+    saldos[item.produto] = (saldos[item.produto] ?? 0) + item.saldo;
   }
+  return [
+    for (final entry in saldos.entries)
+      ProdutoResumo(produto: entry.key, saldo: entry.value),
+  ];
+}
+
+class _ProdutoCard extends StatelessWidget {
+  const _ProdutoCard({required this.resumo});
+
+  final ProdutoResumo resumo;
 
   @override
   Widget build(BuildContext context) {
-    final entrada = item.isEntrada;
     return Container(
       margin: const EdgeInsets.only(top: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: kSurface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: kBorder),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  item.produto,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13.5,
-                  ),
-                ),
+          Expanded(
+            child: Text(
+              resumo.produto,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 13.5,
               ),
-              const SizedBox(width: 8),
-              Text.rich(
-                TextSpan(
-                  style: const TextStyle(
-                    color: kSaldoColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                  children: [
-                    const TextSpan(text: 'Saldo: '),
-                    TextSpan(text: '${formatQuantidade(item.saldo)} un.'),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 14,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              if (item.codigo.isNotEmpty)
-                Text.rich(_campo('Cod', item.codigo),
-                    style: const TextStyle(fontSize: 12)),
-              if (item.armazem.isNotEmpty)
-                Text.rich(_campo('Arm', item.armazem),
-                    style: const TextStyle(fontSize: 12)),
-              if (item.documento.isNotEmpty)
-                Text.rich(_campo('Doc', item.documento),
-                    style: const TextStyle(fontSize: 12)),
-              if (item.emissao.isNotEmpty)
-                Text.rich(
-                  _campo('Emissão', formatData(item.emissao)),
-                  style: const TextStyle(fontSize: 12),
-                ),
-              Text.rich(
-                TextSpan(
-                  style: const TextStyle(fontSize: 12),
-                  children: [
-                    _campo('Orig', formatQuantidade(item.original)),
-                    const TextSpan(
-                        text: ' → ', style: TextStyle(color: kLabelColor)),
-                    _campo('Entregue', formatQuantidade(item.entregue)),
-                  ],
-                ),
-              ),
-              if (item.tipo.isNotEmpty)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      entrada ? Icons.move_to_inbox : Icons.outbox,
-                      size: 15,
-                      color: entrada ? kEntradaColor : kSaidaColor,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      item.tipoDisplay,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: entrada ? kEntradaColor : kSaidaColor,
-                      ),
-                    ),
-                  ],
-                ),
-            ],
+          const SizedBox(width: 8),
+          Text(
+            '${formatQuantidade(resumo.saldo)} un.',
+            style: const TextStyle(
+              color: kSaldoColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
           ),
         ],
       ),
