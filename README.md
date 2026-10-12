@@ -8,6 +8,7 @@ Aplicativo Flutter para consultar a tabela `materiais_terceiros` na base Turso.
 - Itens agrupados por cooperado em expanders, com contagem de itens e saldo total.
 - Cards de item com código, armazém, documento, emissão, quantidade original → entregue, saldo e badge Entrada/Saída.
 - Atualização por pull-to-refresh.
+- Cada produto do cooperado mostra `📍 Galpão 40 · N4` / `BAR-07` (ou `sem endereço`), lido das tabelas do app Gôndolas.
 - Ícone do app com a caixa 📦 (PNGs em `android/app/src/main/res/mipmap-*`).
 
 ## APK sem passo manual de tag

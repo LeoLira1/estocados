@@ -184,6 +184,9 @@ class EstocadosPage extends StatefulWidget {
 class _EstocadosPageState extends State<EstocadosPage> {
   late Future<List<MaterialTerceiro>> _future;
 
+  /// Onde cada palete está no Gôndolas: 'PRODUTO · COOPERADO' → endereços.
+  Map<String, List<String>> _enderecos = const {};
+
   static const _todos = 'Todos';
   String _armazem = _todos;
   String _tipo = _todos;
@@ -203,7 +206,10 @@ class _EstocadosPageState extends State<EstocadosPage> {
     if (url.isEmpty || token.isEmpty) {
       throw Exception('Configure a URL e token na aba Configuração.');
     }
-    return TursoRepository(url: url, token: token).buscarMateriais();
+    final repo = TursoRepository(url: url, token: token);
+    final materiais = await repo.buscarMateriais();
+    _enderecos = await repo.buscarEnderecos();
+    return materiais;
   }
 
   void _recarregar() {
@@ -374,7 +380,11 @@ class _EstocadosPageState extends State<EstocadosPage> {
                   ),
                 ),
               for (final entry in grupos.entries)
-                _GrupoCooperado(cooperado: entry.key, itens: entry.value),
+                _GrupoCooperado(
+                  cooperado: entry.key,
+                  itens: entry.value,
+                  enderecos: _enderecos,
+                ),
             ],
           ),
         );
@@ -489,10 +499,15 @@ class _Filtros extends StatelessWidget {
 }
 
 class _GrupoCooperado extends StatelessWidget {
-  const _GrupoCooperado({required this.cooperado, required this.itens});
+  const _GrupoCooperado({
+    required this.cooperado,
+    required this.itens,
+    this.enderecos = const {},
+  });
 
   final String cooperado;
   final List<MaterialTerceiro> itens;
+  final Map<String, List<String>> enderecos;
 
   @override
   Widget build(BuildContext context) {
@@ -554,7 +569,13 @@ class _GrupoCooperado extends StatelessWidget {
               ),
             ),
             children: [
-              for (final resumo in produtos) _ProdutoCard(resumo: resumo),
+              for (final resumo in produtos)
+                _ProdutoCard(
+                  resumo: resumo,
+                  enderecos:
+                      enderecos[nomeDoPalete(resumo.produto, cooperado)] ??
+                          const [],
+                ),
             ],
           ),
         ),
@@ -585,9 +606,10 @@ List<ProdutoResumo> agruparPorProduto(List<MaterialTerceiro> itens) {
 }
 
 class _ProdutoCard extends StatelessWidget {
-  const _ProdutoCard({required this.resumo});
+  const _ProdutoCard({required this.resumo, this.enderecos = const []});
 
   final ProdutoResumo resumo;
+  final List<String> enderecos;
 
   @override
   Widget build(BuildContext context) {
@@ -602,13 +624,30 @@ class _ProdutoCard extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              resumo.produto,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 13.5,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  resumo.produto,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13.5,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  enderecos.isEmpty
+                      ? 'sem endereço'
+                      : '📍 ${enderecos.join('  ·  ')}',
+                  style: TextStyle(
+                    color: enderecos.isEmpty ? kLabelColor : kAccentBlue,
+                    fontSize: 11.5,
+                    fontWeight:
+                        enderecos.isEmpty ? FontWeight.w400 : FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 8),
@@ -625,6 +664,10 @@ class _ProdutoCard extends StatelessWidget {
     );
   }
 }
+
+/// Nome gravado pelo Gôndolas em `produto_nome` do palete de estocado.
+/// É a chave que liga o palete ao produto do cooperado.
+String nomeDoPalete(String produto, String cooperado) => '$produto · $cooperado';
 
 /// Formata quantidades com separador de milhar; omite decimais quando inteiro.
 String formatQuantidade(double valor) {
@@ -783,6 +826,72 @@ class TursoRepository {
     }).toList();
   }
 
+  /// Onde estão os paletes de estocado lançados no Gôndolas (galpão e
+  /// barracão): 'PRODUTO · COOPERADO' → ['Galpão 40 · N4', 'BAR-07'].
+  ///
+  /// Nunca lança: sem as tabelas do Gôndolas (ou sem rede) o app segue como
+  /// antes, só sem os endereços.
+  Future<Map<String, List<String>>> buscarEnderecos() async {
+    try {
+      final response = await http.post(
+        Uri.parse('${_toHttp(url)}/v2/pipeline'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'requests': [
+            {
+              'type': 'execute',
+              'stmt': {
+                'sql': 'SELECT posicao, ordem, produto_nome FROM galpao_racks '
+                    "WHERE produto_codigo LIKE 'EST:%' ORDER BY posicao, ordem",
+                'want_rows': true,
+              },
+            },
+            {
+              'type': 'execute',
+              'stmt': {
+                'sql': 'SELECT rotulo, produto_nome FROM barracao_enderecos '
+                    "WHERE produto_codigo LIKE 'EST:%' ORDER BY rotulo",
+                'want_rows': true,
+              },
+            },
+          ]
+        }),
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return {};
+      }
+      final map = jsonDecode(response.body) as Map<String, dynamic>;
+      final results = map['results'] as List<dynamic>? ?? [];
+
+      List<Map<String, String>> linhas(int i) {
+        if (i >= results.length) return [];
+        final result = results[i]?['response']?['result'] as Map<String, dynamic>?;
+        if (result == null) return [];
+        final cols = (result['cols'] as List<dynamic>? ?? [])
+            .map((c) => (c['name'] ?? '').toString().toLowerCase())
+            .toList();
+        return [
+          for (final row in result['rows'] as List<dynamic>? ?? [])
+            {
+              for (var c = 0; c < cols.length; c++)
+                cols[c]: ((row as List<dynamic>)[c] is Map
+                            ? row[c]['value']
+                            : row[c])
+                        ?.toString() ??
+                    '',
+            }
+        ];
+      }
+
+      return montarEnderecos(galpao: linhas(0), barracao: linhas(1));
+    } catch (_) {
+      return {};
+    }
+  }
+
   String _toHttp(String dbUrl) {
     final clean = dbUrl.trim();
     if (clean.startsWith('libsql://')) {
@@ -791,4 +900,29 @@ class TursoRepository {
     if (clean.startsWith('https://')) return clean;
     throw Exception('URL inválida: use libsql:// ou https://');
   }
+}
+
+/// Liga cada palete de estocado ao seu nome. [galpao] traz `posicao`, `ordem`
+/// e `produto_nome`; [barracao] traz `rotulo` e `produto_nome`. Linha sem as
+/// colunas esperadas é ignorada.
+Map<String, List<String>> montarEnderecos({
+  required List<Map<String, String>> galpao,
+  required List<Map<String, String>> barracao,
+}) {
+  final mapa = <String, List<String>>{};
+  for (final r in galpao) {
+    final nome = r['produto_nome'] ?? '';
+    final posicao = r['posicao'] ?? '';
+    if (nome.isEmpty || posicao.isEmpty) continue;
+    mapa
+        .putIfAbsent(nome, () => [])
+        .add('Galpão $posicao · N${r['ordem'] ?? '1'}');
+  }
+  for (final r in barracao) {
+    final nome = r['produto_nome'] ?? '';
+    final rotulo = r['rotulo'] ?? '';
+    if (nome.isEmpty || rotulo.isEmpty) continue;
+    mapa.putIfAbsent(nome, () => []).add(rotulo);
+  }
+  return mapa;
 }
